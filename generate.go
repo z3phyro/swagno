@@ -15,20 +15,20 @@ func (swagger Swagger) GenerateDocs() (jsonDocs []byte) {
 		return
 	}
 
-  // generate defination object of swagger json: https://swagger.io/specification/v2/#definitions-object
+	// generate defination object of swagger json: https://swagger.io/specification/v2/#definitions-object
 	generateSwaggerDefinition(&swagger, endpoints)
 
-  // convert all user EndPoint models to 'path' fields of swagger json
-  // https://swagger.io/specification/v2/#paths-object
+	// convert all user EndPoint models to 'path' fields of swagger json
+	// https://swagger.io/specification/v2/#paths-object
 	for _, endpoint := range endpoints {
 		path := endpoint.Path
 
 		if swagger.Paths[path] == nil {
 			swagger.Paths[path] = make(map[string]swaggerEndpoint)
 		}
-		
-    method := strings.ToLower(endpoint.Method)
-    
+
+		method := strings.ToLower(endpoint.Method)
+
 		consumes := []string{"application/json"}
 		produces := []string{"application/json", "application/xml"}
 		for _, param := range endpoint.Params {
@@ -43,8 +43,8 @@ func (swagger Swagger) GenerateDocs() (jsonDocs []byte) {
 		if len(endpoint.Produce) > 0 {
 			produces = append(endpoint.Produce, produces...)
 		}
-    
-    parameters := make([]swaggerParameter, 0)
+
+		parameters := make([]swaggerParameter, 0)
 		for _, param := range endpoint.Params {
 			parameters = append(parameters, swaggerParameter{
 				Name:              param.Name,
@@ -104,13 +104,6 @@ func (swagger Swagger) GenerateDocs() (jsonDocs []byte) {
 			}
 		}
 
-		var errorSchema *swaggerResponseScheme
-		if endpoint.Error != nil {
-			errorSchema = &swaggerResponseScheme{
-				Ref: fmt.Sprintf("#/definitions/%T", endpoint.Error),
-			}
-		}
-
 		responses := make(map[string]swaggerResponse)
 		if successSchema != nil {
 			responses["200"] = swaggerResponse{
@@ -118,14 +111,21 @@ func (swagger Swagger) GenerateDocs() (jsonDocs []byte) {
 				Schema:      *successSchema,
 			}
 		}
-		if errorSchema != nil {
-			responses["404"] = swaggerResponse{
-				Description: "Not Found",
-				Schema:      *errorSchema,
+
+		if endpoint.Errors != nil {
+			for k, v := range endpoint.Errors {
+				errorSchema := &swaggerResponseScheme{
+					Ref: fmt.Sprintf("#/definitions/%T", v.Model),
+				}
+
+				responses[k] = swaggerResponse{
+					Description: v.Description,
+					Schema:      *errorSchema,
+				}
 			}
 		}
 
-    // add each endpoint to paths field of swagger
+		// add each endpoint to paths field of swagger
 		swagger.Paths[path][method] = swaggerEndpoint{
 			Description: endpoint.Description,
 			Summary:     endpoint.Description,
@@ -139,7 +139,7 @@ func (swagger Swagger) GenerateDocs() (jsonDocs []byte) {
 		}
 	}
 
-  // convert Swagger instance to json string and return it
+	// convert Swagger instance to json string and return it
 	json, err := json.MarshalIndent(swagger, "", "  ")
 	if err != nil {
 		log.Println("Error while generating swagger json")
@@ -149,7 +149,7 @@ func (swagger Swagger) GenerateDocs() (jsonDocs []byte) {
 
 // generate "definitions" keys from endpoints: https://swagger.io/specification/v2/#definitions-object
 func generateSwaggerDefinition(swagger *Swagger, endpoints []Endpoint) {
-  // create all definations for each model used in endpoint
+	// create all definations for each model used in endpoint
 	(*swagger).Definitions = make(map[string]swaggerDefinition)
 	for _, endpoint := range endpoints {
 		if endpoint.Body != nil {
@@ -158,16 +158,22 @@ func generateSwaggerDefinition(swagger *Swagger, endpoints []Endpoint) {
 		if endpoint.Return != nil {
 			createdefinition(swagger, endpoint.Return)
 		}
-		if endpoint.Error != nil {
-			createdefinition(swagger, endpoint.Error)
+		if endpoint.Errors != nil {
+			createErrorDefinition(swagger, endpoint.Errors)
 		}
+	}
+}
+
+func createErrorDefinition(swagger *Swagger, t map[string]ErrorSchema) {
+	for _, k := range t {
+		createdefinition(swagger, k.Model)
 	}
 }
 
 // generate "definitions" attribute for swagger json
 func createdefinition(swagger *Swagger, t interface{}) {
 	reflectReturn := reflect.TypeOf(t)
-	if reflectReturn.Kind() == reflect.Slice {
+	if reflectReturn.Kind() == reflect.Map {
 		reflectReturn = reflectReturn.Elem()
 	}
 	properties := make(map[string]swaggerDefinitionProperties)
@@ -175,12 +181,12 @@ func createdefinition(swagger *Swagger, t interface{}) {
 		field := reflectReturn.Field(i)
 		fieldType := getType(field.Type.Kind().String())
 
-    // skip for function and channel types
+		// skip for function and channel types
 		if fieldType == "func" || fieldType == "chan" {
 			continue
 		}
 
-    // if item type is array, create defination for array element type
+		// if item type is array, create defination for array element type
 		if fieldType == "array" {
 			if field.Type.Elem().Kind() == reflect.Struct {
 				properties[getJsonTag(field)] = swaggerDefinitionProperties{
@@ -250,7 +256,7 @@ func createdefinition(swagger *Swagger, t interface{}) {
 	}
 }
 
-// get struct json tag as string of a struct field 
+// get struct json tag as string of a struct field
 func getJsonTag(field reflect.StructField) string {
 	jsonTag := field.Tag.Get("json")
 	if strings.Index(jsonTag, ",") > 0 {

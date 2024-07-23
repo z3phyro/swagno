@@ -71,22 +71,27 @@ type Fields struct {
 	CollenctionFormat string      `json:"collectionFormat,omitempty"`
 }
 
+type ErrorSchema struct {
+	Description string      `json:"description"`
+	Model       interface{} `json:"model"`
+}
+
 type Endpoint struct {
-	Method      string                `json:"method"`
-	Path        string                `json:"path"`
-	Params      []Parameter           `json:"params"`
-	Tags        []string              `json:"tags"`
-	Return      interface{}           `json:"return"`
-	Error       interface{}           `json:"error"`
-	Body        interface{}           `json:"body"`
-	Description string                `json:"description"`
-	Consume     []string              `json:"consume"`
-	Produce     []string              `json:"produce"`
-	Security    []map[string][]string `json:"security"`
+	Method      string                 `json:"method"`
+	Path        string                 `json:"path"`
+	Params      []Parameter            `json:"params"`
+	Tags        []string               `json:"tags"`
+	Return      interface{}            `json:"return"`
+	Errors      map[string]ErrorSchema `json:"errors"`
+	Body        interface{}            `json:"body"`
+	Description string                 `json:"description"`
+	Consume     []string               `json:"consume"`
+	Produce     []string               `json:"produce"`
+	Security    []map[string][]string  `json:"security"`
 }
 
 // args: method, path, tags, params, body, return, error, description, security, consume, produce
-func EndPoint(method MethodType, path string, tags string, params []Parameter, body interface{}, ret interface{}, err interface{}, des string, security []map[string][]string, args ...string) Endpoint {
+func EndPoint(method MethodType, path string, tags string, params []Parameter, body interface{}, ret interface{}, err map[string]ErrorSchema, des string, security []map[string][]string, args ...string) Endpoint {
 	removedSpace := strings.ReplaceAll(tags, " ", "")
 	endpoint := Endpoint{
 		Method:      string(method),
@@ -95,7 +100,7 @@ func EndPoint(method MethodType, path string, tags string, params []Parameter, b
 		Params:      params,
 		Return:      ret,
 		Body:        body,
-		Error:       err,
+		Errors:      err,
 		Description: des,
 		Security:    security,
 	}

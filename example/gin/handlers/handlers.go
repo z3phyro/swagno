@@ -58,9 +58,9 @@ func (h *Handler) SetSwagger(a *gin.Engine) {
 		EndPoint(POST, "/productUpload", "upload", Params(FileParam("file", true, "File to upload")), nil, models.Product{}, models.ErrorResponse{}, "", nil),
 
 		// without EndPoint function
-		{Method: "GET", Path: "/product4/{id}", Description: "product", Params: Params(IntParam("id", true, "")), Return: models.Product{}, Error: models.ErrorResponse{}, Tags: []string{"WithStruct"}},
+		{Method: "GET", Path: "/product4/{id}", Description: "product", Params: Params(IntParam("id", true, "")), Return: models.Product{}, Errors: models.ErrorResponse{}, Tags: []string{"WithStruct"}},
 		// without EndPoint function and without Params
-		{Method: "GET", Path: "/product5/{id}", Description: "product", Params: []Parameter{{Name: "id", Type: "integer", In: "path", Required: true}}, Return: models.Product{}, Error: models.ErrorResponse{}, Tags: []string{"WithStruct"}},
+		{Method: "GET", Path: "/product5/{id}", Description: "product", Params: []Parameter{{Name: "id", Type: "integer", In: "path", Required: true}}, Return: models.Product{}, Errors: models.ErrorResponse{}, Tags: []string{"WithStruct"}},
 
 		// with security
 		EndPoint(POST, "/secure-product", "Secure", Params(), models.ProductPost{}, models.Product{}, models.ErrorResponse{}, "Only Basic Auth", BasicAuth()),
